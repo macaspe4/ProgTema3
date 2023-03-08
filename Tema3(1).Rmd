@@ -1,0 +1,128 @@
+---
+title: "Tema 3"
+subtitle: Tratamiento de Datos. Grado en Ciencia de Datos- UV
+author: "Visualiza Grupo P"
+date:  "`r Sys.Date()`"  #Pondría la fecha del día actual
+ 
+params:
+  lang: ES
+lang: "`r switch(params$lang, ES = 'es-ES', EN = 'en-US')`"
+output:
+  html_document:
+    echo: yes
+    number_sections: yes
+    theme: lumen
+    toc: yes
+  html_notebook:
+    echo: yes
+    number_sections: yes
+    toc: yes
+  pdf_document:
+    toc: yes
+    toc_depth: 3
+    number_sections: yes
+language:
+  label:
+    fig: 'Figura '
+    tab: 'Tabla '
+    eq: 'Ecuación '
+    thm: 'Teorema '
+    lem: 'Lema '
+    def: 'Definición '
+    cor: 'Corolario '
+    prp: 'Proposición '
+    exm: 'Ejemplo '
+    exr: 'Ejercicio '
+    proof: 'Demostración. '
+    remark: 'Nota: '
+    solution: 'Solución. '
+---
+
+
+```{r setup, cache = F, echo = F, message = F, warning = F, tidy = F}
+
+# CONFIGURACIÓN GENERAL
+library(knitr)
+options(width = 100)
+# Opciones generales chunks
+opts_chunk$set(echo=T,message = F, error = F, warning = F, comment = NA, fig.align = 'center', dpi = 100, tidy = F, cache.path = '.cache/', fig.path = './figure/')
+
+#options(xtable.type = 'html')
+knit_hooks$set(inline = function(x) {
+  
+  if(is.numeric(x)) {
+    round(x, getOption('digits'))
+  } else {
+    paste(as.character(x), collapse = ', ')
+  }
+})
+#knit_hooks$set(plot = knitr:::hook_plot_html)
+```
+
+## Imagen Covid
+
+```{r}
+# Cargamos las librerías que vamos a necesitar
+library(tidyverse)
+library(knitr)
+library(htmltools)
+library(plotly)
+library(ggplot2)
+library(datasets)
+library(dplyr)
+library(extrafont)
+library(stringr)
+
+# Carga de fuentes de letra adicionales
+# Si no tienes descargadas las fuentes, ejecuta esto antes: font_import
+loadfonts(device = "win", quiet = TRUE)
+
+# Lectura de los datos de forma correcta
+# Cambiamos el tipo de la fecha de chr a tipo fecha
+covid_data <- read_csv("./data/owid-covid-data.csv", col_types = cols(date = col_date(format = "%Y-%m-%d")))
+
+# Creamos un vector con los países de la gráfica
+# Filtramos por esos países y creamos el dataframe con los datos del gráfico
+selected_countries <- c("United States", "Italy", "France", "Germany", "Canada", "Japan", "United Kingdom", "Spain")
+selected_data <- covid_data %>%
+  filter(location %in% selected_countries) %>%
+  rename(country = location, deaths_per_million = new_deaths_smoothed_per_million)
+
+# Creamos una tabla de referencia para colores de los países
+country_colors <- c(
+  "United States" = "#7A4C9A",
+  "Italy" = "#2B938D",
+  "France" = "#B03608",
+  "Germany" = "#399C66",
+  "Canada" = "#88313A",
+  "Japan" = "#47566E",
+  "United Kingdom" = "#D42773",
+  "Spain" =  "black"
+)
+
+# Creamos el gráfico lo más parecido al ejemplo de AV
+grafico_covid <- ggplot(selected_data, aes(x = date, y = deaths_per_million, color = country, group = country)) + 
+  geom_line(data = filter(selected_data, country == "Spain"), size = 1) + 
+  geom_path() + 
+  scale_y_continuous(breaks = seq(0, 18, by = 2)) +
+  scale_x_date(date_labels = "%b %d, %Y", breaks = seq(min(selected_data$date), max(selected_data$date), length.out = 6)) +
+  geom_hline(yintercept = c(2, 4, 6, 8, 10, 12, 14, 16, 18), linetype = "dotted", color = "gray", size = 0.5) +
+  scale_color_manual(values = country_colors) +
+  labs(x = "", y = "", title = "Daily new confirmed COVID-19 death per million people", 
+       subtitle = "7-day rolling average. For some countries the number of confirmed deaths is much lower than the \n true number of deaths. This is because of limited testing and challenges in the attribution of the \n cause of death.", 
+       caption = "Source: Johns Hopkins University CSSE COVID-19 Data" ) +
+  theme_bw() +
+  theme(
+    plot.title = element_text(family = "Times New Roman", size = 18, color = "#555555"),
+    plot.subtitle = element_text(color = "#818181"),
+    plot.caption = element_text(hjust = 0, color = "#818181")
+  )
+
+# Convertimos el gráfico a uno interactivo utilizando plotly
+grafico_covid_interactivo <- ggplotly(grafico_covid) %>%
+  layout(plot_bgcolor = "white", paper_bgcolor = "white")
+
+# Muestra los gráficos
+grafico_covid
+grafico_covid_interactivo
+```
